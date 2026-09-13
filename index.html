@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -13,12 +12,10 @@
     h1 span { color: #232F3E; }
     .form-group { margin-bottom: 12px; }
     label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; color: #444; }
-    input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background-color: #fff; }
     .row { display: flex; gap: 10px; }
     .row .form-group { flex: 1; }
-    .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 15px 0; font-size: 13px; font-weight: 500; }
-    .checkbox-group input { width: 16px; height: 16px; accent-color: #FF9900; }
-    .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    .btn-group { display: flex; gap: 10px; margin: 15px 0 20px 0; }
     button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
     .btn-calc { background-color: #FF9900; color: #fff; }
     .btn-calc:hover { background-color: #e08700; }
@@ -50,6 +47,28 @@
 
   <div class="row">
     <div class="form-group">
+      <label>Plano de Venda Amazon:</label>
+      <select id="planoVenda">
+        <option value="prof">Profissional (R$ 19,00/mês - Sem taxa por item)</option>
+        <option value="ind">Individual (Sem mensalidade + R$ 2,00 por item)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Modelo Logístico (Frete):</label>
+      <select id="modeloLogistico">
+        <option value="dba">DBA - Delivery by Amazon (Coleta na loja)</option>
+        <option value="fba">FBA - Fulfillment by Amazon (Estoque Amazon)</option>
+        <option value="onsite">FBA Onsite (Operação própria com selo FBA)</option>
+        <option value="proprio">DBM / Envio Próprio (Correios/Transportadora)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
       <label>Preço de Custo (R$):</label>
       <input type="number" id="custo" step="0.01" placeholder="0.00">
     </div>
@@ -72,7 +91,7 @@
 
   <div class="row">
     <div class="form-group">
-      <label>Frete / Envio (R$):</label>
+      <label>Custo de Frete Envio (R$):</label>
       <input type="number" id="frete" step="0.01" value="0" placeholder="0.00">
     </div>
     <div class="form-group">
@@ -81,19 +100,14 @@
     </div>
   </div>
 
-  <div class="checkbox-group">
-    <input type="checkbox" id="planoIndividual">
-    <label for="planoIndividual" style="margin:0; font-weight:normal;">Plano Individual (+ R$ 2,00 por item)</label>
-  </div>
-
   <div class="btn-group">
     <button class="btn-calc" onclick="calcular()">Calcular</button>
     <button class="btn-save" onclick="salvarItem()">Salvar no Celular</button>
   </div>
 
   <div class="results">
-    <div class="result-row"><span>Comissão Amazon:</span><span id="resComissao">0% (R$ 0,00)</span></div>
-    <div class="result-row"><span>Taxa Fixa Plano:</span><span id="resTaxaFixa">R$ 0,00</span></div>
+    <div class="result-row"><span>Comissão Amazon (Pet 12%):</span><span id="resComissao">0% (R$ 0,00)</span></div>
+    <div class="result-row"><span>Taxa Fixa do Plano:</span><span id="resTaxaFixa">R$ 0,00</span></div>
     <div class="result-row"><span>Imposto Calculado:</span><span id="resImposto">R$ 0,00</span></div>
     <div class="result-row"><span>Total Custos & Taxas:</span><span id="resTotalCustos">R$ 0,00</span></div>
     <div class="result-row"><span>Valor Líquido Recebido:</span><span id="resLiquido">R$ 0,00</span></div>
@@ -119,16 +133,19 @@
     const impostoPct = parseFloat(document.getElementById('imposto').value) || 0;
     const frete = parseFloat(document.getElementById('frete').value) || 0;
     const comissaoPct = parseFloat(document.getElementById('comissao').value) || 12;
-    const ehIndividual = document.getElementById('planoIndividual').checked;
+    const planoVenda = document.getElementById('planoVenda').value;
+    const modeloLogistico = document.getElementById('modeloLogistico').value;
 
-    // Regra da Amazon Pet: 12% com mínimo de R$ 2,00
+    // Regra da Amazon Pet: 12% com mínimo de R$ 2,00 por item
     let valorComissao = venda * (comissaoPct / 100);
     if (venda > 0 && valorComissao < 2.00) {
       valorComissao = 2.00;
     }
 
-    const taxaFixa = ehIndividual ? 2.00 : 0.00;
+    // Taxa fixa do plano individual (R$ 2,00 por item)
+    const taxaFixa = (planoVenda === 'ind') ? 2.00 : 0.00;
     const valorImposto = venda * (impostoPct / 100);
+
     const totalCustos = custo + embalagem + frete + valorComissao + taxaFixa + valorImposto;
     const liquido = venda - (valorComissao + taxaFixa + valorImposto + frete);
     const lucro = venda - totalCustos;
@@ -143,7 +160,7 @@
     document.getElementById('resLucro').style.color = lucro >= 0 ? '#00a884' : '#dc3545';
     document.getElementById('resMargem').innerText = `${margem.toFixed(1)}%`;
 
-    return { custo, venda, embalagem, impostoPct, frete, comissaoPct, ehIndividual, lucro, margem };
+    return { custo, venda, embalagem, impostoPct, frete, comissaoPct, planoVenda, modeloLogistico, lucro, margem };
   }
 
   function salvarItem() {
@@ -163,10 +180,10 @@
       impostoPct: res.impostoPct,
       frete: res.frete,
       comissaoPct: res.comissaoPct,
-      ehIndividual: res.ehIndividual
+      planoVenda: res.planoVenda,
+      modeloLogistico: res.modeloLogistico
     };
 
-    // Atualizar se já existir ou adicionar
     const index = itensSalvos.findIndex(i => i.nome.toLowerCase() === nome.toLowerCase());
     if (index >= 0) {
       itensSalvos[index] = novoItem;
@@ -188,7 +205,8 @@
       document.getElementById('imposto').value = item.impostoPct;
       document.getElementById('frete').value = item.frete;
       document.getElementById('comissao').value = item.comissaoPct;
-      document.getElementById('planoIndividual').checked = item.ehIndividual;
+      document.getElementById('planoVenda').value = item.planoVenda || 'prof';
+      document.getElementById('modeloLogistico').value = item.modeloLogistico || 'dba';
       calcular();
     }
   }
