@@ -49,8 +49,8 @@
     <div class="form-group">
       <label>Plano de Venda Amazon:</label>
       <select id="planoVenda">
-        <option value="prof">Profissional (R$ 19,00/mês - Sem taxa por item)</option>
-        <option value="ind">Individual (Sem mensalidade + R$ 2,00 por item)</option>
+        <option value="prof">Profissional (R$ 19,00/mês)</option>
+        <option value="ind">Individual (+ R$ 2,00 por item)</option>
       </select>
     </div>
   </div>
@@ -58,11 +58,9 @@
   <div class="row">
     <div class="form-group">
       <label>Modelo Logístico (Frete):</label>
-      <select id="modeloLogistico">
-        <option value="dba">DBA - Delivery by Amazon (Coleta na loja)</option>
-        <option value="fba">FBA - Fulfillment by Amazon (Estoque Amazon)</option>
-        <option value="onsite">FBA Onsite (Operação própria com selo FBA)</option>
-        <option value="proprio">DBM / Envio Próprio (Correios/Transportadora)</option>
+      <select id="modeloLogistico" onchange="alternarCampoFrete()">
+        <option value="dba">DBA (Calcula por peso automático)</option>
+        <option value="proprio">Envio Próprio / Outros (Digitar R$)</option>
       </select>
     </div>
   </div>
@@ -79,20 +77,24 @@
   </div>
 
   <div class="row">
-    <div class="form-group">
-      <label>Embalagem/Outros (R$):</label>
-      <input type="number" id="embalagem" step="0.01" value="0">
+    <div class="form-group" id="groupPeso">
+      <label>Peso do Pacote (Gramas):</label>
+      <input type="number" id="peso" placeholder="Ex: 500 para 500g">
+    </div>
+    <div class="form-group" id="groupFreteManual" style="display:none;">
+      <label>Frete Manual (R$):</label>
+      <input type="number" id="freteManual" step="0.01" value="0">
     </div>
     <div class="form-group">
-      <label>Imposto (%):</label>
-      <input type="number" id="imposto" step="0.1" value="0">
+      <label>Embalagem (R$):</label>
+      <input type="number" id="embalagem" step="0.01" value="0">
     </div>
   </div>
 
   <div class="row">
     <div class="form-group">
-      <label>Custo de Frete Envio (R$):</label>
-      <input type="number" id="frete" step="0.01" value="0" placeholder="0.00">
+      <label>Imposto (%):</label>
+      <input type="number" id="imposto" step="0.1" value="0">
     </div>
     <div class="form-group">
       <label>Comissão Pet (%):</label>
@@ -108,6 +110,7 @@
   <div class="results">
     <div class="result-row"><span>Comissão Amazon (Pet 12%):</span><span id="resComissao">0% (R$ 0,00)</span></div>
     <div class="result-row"><span>Taxa Fixa do Plano:</span><span id="resTaxaFixa">R$ 0,00</span></div>
+    <div class="result-row"><span>Custo de Frete (Envio):</span><span id="resFrete">R$ 0,00</span></div>
     <div class="result-row"><span>Imposto Calculado:</span><span id="resImposto">R$ 0,00</span></div>
     <div class="result-row"><span>Total Custos & Taxas:</span><span id="resTotalCustos">R$ 0,00</span></div>
     <div class="result-row"><span>Valor Líquido Recebido:</span><span id="resLiquido">R$ 0,00</span></div>
@@ -126,33 +129,73 @@
 <script>
   let itensSalvos = JSON.parse(localStorage.getItem('amazon_pet_items') || '[]');
 
+  function alternarCampoFrete() {
+    const modelo = document.getElementById('modeloLogistico').value;
+    if (modelo === 'dba') {
+      document.getElementById('groupPeso').style.display = 'block';
+      document.getElementById('groupFreteManual').style.display = 'none';
+    } else {
+      document.getElementById('groupPeso').style.display = 'none';
+      document.getElementById('groupFreteManual').style.display = 'block';
+    }
+  }
+
+  function obterTaxaFreteDBA(pesoGramas, precoVenda) {
+    if (pesoGramas <= 0) return 0;
+    
+    // Tabela de tarifas base DBA Amazon Brasil
+    let tarifaBase = 0;
+    if (pesoGramas <= 300) tarifaBase = 6.00;
+    else if (pesoGramas <= 500) tarifaBase = 7.50;
+    else if (pesoGramas <= 1000) tarifaBase = 9.50;
+    else if (pesoGramas <= 2000) tarifaBase = 12.00;
+    else if (pesoGramas <= 5000) tarifaBase = 17.00;
+    else if (pesoGramas <= 10000) tarifaBase = 26.00;
+    else if (pesoGramas <= 15000) tarifaBase = 35.00;
+    else if (pesoGramas <= 30000) tarifaBase = 55.00;
+    else tarifaBase = 55.00 + ((pesoGramas - 30000) / 1000) * 1.50;
+
+    // Desconto de 50% na taxa para anúncios a partir de R$ 79,00 (Frete Grátis Prime)
+    if (precoVenda >= 79.00) {
+      return tarifaBase * 0.50;
+    }
+    return tarifaBase;
+  }
+
   function calcular() {
     const custo = parseFloat(document.getElementById('custo').value) || 0;
     const venda = parseFloat(document.getElementById('venda').value) || 0;
     const embalagem = parseFloat(document.getElementById('embalagem').value) || 0;
     const impostoPct = parseFloat(document.getElementById('imposto').value) || 0;
-    const frete = parseFloat(document.getElementById('frete').value) || 0;
     const comissaoPct = parseFloat(document.getElementById('comissao').value) || 12;
     const planoVenda = document.getElementById('planoVenda').value;
     const modeloLogistico = document.getElementById('modeloLogistico').value;
+    const pesoGramas = parseFloat(document.getElementById('peso').value) || 0;
+    
+    let freteCalculado = 0;
+    if (modeloLogistico === 'dba') {
+      freteCalculado = obterTaxaFreteDBA(pesoGramas, venda);
+    } else {
+      freteCalculado = parseFloat(document.getElementById('freteManual').value) || 0;
+    }
 
-    // Regra da Amazon Pet: 12% com mínimo de R$ 2,00 por item
+    // Regra Amazon Pet: 12% com mínimo de R$ 2,00
     let valorComissao = venda * (comissaoPct / 100);
     if (venda > 0 && valorComissao < 2.00) {
       valorComissao = 2.00;
     }
 
-    // Taxa fixa do plano individual (R$ 2,00 por item)
     const taxaFixa = (planoVenda === 'ind') ? 2.00 : 0.00;
     const valorImposto = venda * (impostoPct / 100);
 
-    const totalCustos = custo + embalagem + frete + valorComissao + taxaFixa + valorImposto;
-    const liquido = venda - (valorComissao + taxaFixa + valorImposto + frete);
+    const totalCustos = custo + embalagem + freteCalculado + valorComissao + taxaFixa + valorImposto;
+    const liquido = venda - (valorComissao + taxaFixa + valorImposto + freteCalculado);
     const lucro = venda - totalCustos;
     const margem = venda > 0 ? (lucro / venda) * 100 : 0;
 
     document.getElementById('resComissao').innerText = `${comissaoPct}% (R$ ${valorComissao.toFixed(2)})`;
     document.getElementById('resTaxaFixa').innerText = `R$ ${taxaFixa.toFixed(2)}`;
+    document.getElementById('resFrete').innerText = `R$ ${freteCalculado.toFixed(2)}`;
     document.getElementById('resImposto').innerText = `R$ ${valorImposto.toFixed(2)}`;
     document.getElementById('resTotalCustos').innerText = `R$ ${totalCustos.toFixed(2)}`;
     document.getElementById('resLiquido').innerText = `R$ ${liquido.toFixed(2)}`;
@@ -160,7 +203,7 @@
     document.getElementById('resLucro').style.color = lucro >= 0 ? '#00a884' : '#dc3545';
     document.getElementById('resMargem').innerText = `${margem.toFixed(1)}%`;
 
-    return { custo, venda, embalagem, impostoPct, frete, comissaoPct, planoVenda, modeloLogistico, lucro, margem };
+    return { custo, venda, embalagem, impostoPct, freteCalculado, pesoGramas, comissaoPct, planoVenda, modeloLogistico, lucro, margem };
   }
 
   function salvarItem() {
@@ -178,7 +221,8 @@
       venda: res.venda,
       embalagem: res.embalagem,
       impostoPct: res.impostoPct,
-      frete: res.frete,
+      freteCalculado: res.freteCalculado,
+      pesoGramas: res.pesoGramas,
       comissaoPct: res.comissaoPct,
       planoVenda: res.planoVenda,
       modeloLogistico: res.modeloLogistico
@@ -203,10 +247,12 @@
       document.getElementById('venda').value = item.venda;
       document.getElementById('embalagem').value = item.embalagem;
       document.getElementById('imposto').value = item.impostoPct;
-      document.getElementById('frete').value = item.frete;
       document.getElementById('comissao').value = item.comissaoPct;
       document.getElementById('planoVenda').value = item.planoVenda || 'prof';
       document.getElementById('modeloLogistico').value = item.modeloLogistico || 'dba';
+      document.getElementById('peso').value = item.pesoGramas || '';
+      document.getElementById('freteManual').value = item.freteCalculado || 0;
+      alternarCampoFrete();
       calcular();
     }
   }
