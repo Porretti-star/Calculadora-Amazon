@@ -42,7 +42,7 @@
 
   <div class="form-group">
     <label>Nome do Produto / Referência:</label>
-    <input type="text" id="nome" placeholder="Ex: Areia Gato Bill Fardo">
+    <input type="text" id="nome" placeholder="Ex: Areia Gato Bill 6kg">
   </div>
 
   <div class="row">
@@ -78,8 +78,8 @@
 
   <div class="row">
     <div class="form-group" id="groupPeso">
-      <label>Peso do Pacote (Gramas):</label>
-      <input type="number" id="peso" placeholder="Ex: 500 para 500g">
+      <label>Peso do Pacote (kg):</label>
+      <input type="number" id="peso" step="0.01" placeholder="Ex: 6 para 6kg ou 0.5 para 500g">
     </div>
     <div class="form-group" id="groupFreteManual" style="display:none;">
       <label>Frete Manual (R$):</label>
@@ -140,10 +140,12 @@
     }
   }
 
-  function obterTaxaFreteDBA(pesoGramas, precoVenda) {
-    if (pesoGramas <= 0) return 0;
+  function obterTaxaFreteDBA(pesoKg, precoVenda) {
+    if (pesoKg <= 0) return 0;
     
-    // Tabela de tarifas base DBA Amazon Brasil
+    // Converte kg para gramas internamente para aplicar as faixas exatas da Amazon
+    const pesoGramas = pesoKg * 1000;
+    
     let tarifaBase = 0;
     if (pesoGramas <= 300) tarifaBase = 6.00;
     else if (pesoGramas <= 500) tarifaBase = 7.50;
@@ -155,7 +157,7 @@
     else if (pesoGramas <= 30000) tarifaBase = 55.00;
     else tarifaBase = 55.00 + ((pesoGramas - 30000) / 1000) * 1.50;
 
-    // Desconto de 50% na taxa para anúncios a partir de R$ 79,00 (Frete Grátis Prime)
+    // Desconto de 50% no frete para produtos a partir de R$ 79,00 (Frete Grátis Prime)
     if (precoVenda >= 79.00) {
       return tarifaBase * 0.50;
     }
@@ -170,11 +172,11 @@
     const comissaoPct = parseFloat(document.getElementById('comissao').value) || 12;
     const planoVenda = document.getElementById('planoVenda').value;
     const modeloLogistico = document.getElementById('modeloLogistico').value;
-    const pesoGramas = parseFloat(document.getElementById('peso').value) || 0;
+    const pesoKg = parseFloat(document.getElementById('peso').value) || 0;
     
     let freteCalculado = 0;
     if (modeloLogistico === 'dba') {
-      freteCalculado = obterTaxaFreteDBA(pesoGramas, venda);
+      freteCalculado = obterTaxaFreteDBA(pesoKg, venda);
     } else {
       freteCalculado = parseFloat(document.getElementById('freteManual').value) || 0;
     }
@@ -203,7 +205,7 @@
     document.getElementById('resLucro').style.color = lucro >= 0 ? '#00a884' : '#dc3545';
     document.getElementById('resMargem').innerText = `${margem.toFixed(1)}%`;
 
-    return { custo, venda, embalagem, impostoPct, freteCalculado, pesoGramas, comissaoPct, planoVenda, modeloLogistico, lucro, margem };
+    return { custo, venda, embalagem, impostoPct, freteCalculado, pesoKg, comissaoPct, planoVenda, modeloLogistico, lucro, margem };
   }
 
   function salvarItem() {
@@ -222,7 +224,7 @@
       embalagem: res.embalagem,
       impostoPct: res.impostoPct,
       freteCalculado: res.freteCalculado,
-      pesoGramas: res.pesoGramas,
+      pesoKg: res.pesoKg,
       comissaoPct: res.comissaoPct,
       planoVenda: res.planoVenda,
       modeloLogistico: res.modeloLogistico
@@ -250,7 +252,7 @@
       document.getElementById('comissao').value = item.comissaoPct;
       document.getElementById('planoVenda').value = item.planoVenda || 'prof';
       document.getElementById('modeloLogistico').value = item.modeloLogistico || 'dba';
-      document.getElementById('peso').value = item.pesoGramas || '';
+      document.getElementById('peso').value = item.pesoKg || '';
       document.getElementById('freteManual').value = item.freteCalculado || 0;
       alternarCampoFrete();
       calcular();
