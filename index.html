@@ -1,1 +1,233 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora Amazon - Ramo Pet</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f4f6f8; margin: 0; padding: 15px; color: #333; }
+    .container { max-width: 450px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h1 { text-align: center; color: #FF9900; margin-top: 0; font-size: 24px; }
+    h1 span { color: #232F3E; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 13px; color: #444; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    .row { display: flex; gap: 10px; }
+    .row .form-group { flex: 1; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 15px 0; font-size: 13px; font-weight: 500; }
+    .checkbox-group input { width: 16px; height: 16px; accent-color: #FF9900; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+    button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
+    .btn-calc { background-color: #FF9900; color: #fff; }
+    .btn-calc:hover { background-color: #e08700; }
+    .btn-save { background-color: #00a884; color: #fff; }
+    .btn-save:hover { background-color: #008f70; }
+    .results { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+    .result-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; color: #555; }
+    .result-row.highlight { font-size: 16px; font-weight: bold; color: #00a884; margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; }
+    .section-title { font-size: 14px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #ccc; padding-top: 15px; }
+    .btn-clear { background: #dc3545; color: white; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: none; cursor: pointer; }
+    .saved-list { display: flex; flex-direction: column; gap: 8px; }
+    .saved-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 6px; }
+    .saved-info { font-size: 12px; }
+    .saved-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; }
+    .item-btns { display: flex; gap: 4px; }
+    .btn-open { background: #007bff; color: white; border: none; padding: 6px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; }
+    .btn-delete { background: #ffc107; color: #333; border: none; padding: 6px 10px; font-size: 11px; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Calculadora <span>Amazon</span></h1>
+
+  <div class="form-group">
+    <label>Nome do Produto / Referência:</label>
+    <input type="text" id="nome" placeholder="Ex: Areia Gato Bill Fardo">
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Preço de Custo (R$):</label>
+      <input type="number" id="custo" step="0.01" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label>Preço de Venda (R$):</label>
+      <input type="number" id="venda" step="0.01" placeholder="0.00">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Embalagem/Outros (R$):</label>
+      <input type="number" id="embalagem" step="0.01" value="0">
+    </div>
+    <div class="form-group">
+      <label>Imposto (%):</label>
+      <input type="number" id="imposto" step="0.1" value="0">
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Frete / Envio (R$):</label>
+      <input type="number" id="frete" step="0.01" value="0" placeholder="0.00">
+    </div>
+    <div class="form-group">
+      <label>Comissão Pet (%):</label>
+      <input type="number" id="comissao" step="0.1" value="12">
+    </div>
+  </div>
+
+  <div class="checkbox-group">
+    <input type="checkbox" id="planoIndividual">
+    <label for="planoIndividual" style="margin:0; font-weight:normal;">Plano Individual (+ R$ 2,00 por item)</label>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn-calc" onclick="calcular()">Calcular</button>
+    <button class="btn-save" onclick="salvarItem()">Salvar no Celular</button>
+  </div>
+
+  <div class="results">
+    <div class="result-row"><span>Comissão Amazon:</span><span id="resComissao">0% (R$ 0,00)</span></div>
+    <div class="result-row"><span>Taxa Fixa Plano:</span><span id="resTaxaFixa">R$ 0,00</span></div>
+    <div class="result-row"><span>Imposto Calculado:</span><span id="resImposto">R$ 0,00</span></div>
+    <div class="result-row"><span>Total Custos & Taxas:</span><span id="resTotalCustos">R$ 0,00</span></div>
+    <div class="result-row"><span>Valor Líquido Recebido:</span><span id="resLiquido">R$ 0,00</span></div>
+    <div class="result-row highlight"><span>Lucro Bruto:</span><span id="resLucro">R$ 0,00</span></div>
+    <div class="result-row"><span>Margem de Lucro:</span><span id="resMargem">0%</span></div>
+  </div>
+
+  <div class="section-title">
+    <span>📁 Itens Salvos neste Celular</span>
+    <button class="btn-clear" onclick="limparTudo()">Limpar Tudo</button>
+  </div>
+
+  <div class="saved-list" id="listaSalvos"></div>
+</div>
+
+<script>
+  let itensSalvos = JSON.parse(localStorage.getItem('amazon_pet_items') || '[]');
+
+  function calcular() {
+    const custo = parseFloat(document.getElementById('custo').value) || 0;
+    const venda = parseFloat(document.getElementById('venda').value) || 0;
+    const embalagem = parseFloat(document.getElementById('embalagem').value) || 0;
+    const impostoPct = parseFloat(document.getElementById('imposto').value) || 0;
+    const frete = parseFloat(document.getElementById('frete').value) || 0;
+    const comissaoPct = parseFloat(document.getElementById('comissao').value) || 12;
+    const ehIndividual = document.getElementById('planoIndividual').checked;
+
+    // Regra da Amazon Pet: 12% com mínimo de R$ 2,00
+    let valorComissao = venda * (comissaoPct / 100);
+    if (venda > 0 && valorComissao < 2.00) {
+      valorComissao = 2.00;
+    }
+
+    const taxaFixa = ehIndividual ? 2.00 : 0.00;
+    const valorImposto = venda * (impostoPct / 100);
+    const totalCustos = custo + embalagem + frete + valorComissao + taxaFixa + valorImposto;
+    const liquido = venda - (valorComissao + taxaFixa + valorImposto + frete);
+    const lucro = venda - totalCustos;
+    const margem = venda > 0 ? (lucro / venda) * 100 : 0;
+
+    document.getElementById('resComissao').innerText = `${comissaoPct}% (R$ ${valorComissao.toFixed(2)})`;
+    document.getElementById('resTaxaFixa').innerText = `R$ ${taxaFixa.toFixed(2)}`;
+    document.getElementById('resImposto').innerText = `R$ ${valorImposto.toFixed(2)}`;
+    document.getElementById('resTotalCustos').innerText = `R$ ${totalCustos.toFixed(2)}`;
+    document.getElementById('resLiquido').innerText = `R$ ${liquido.toFixed(2)}`;
+    document.getElementById('resLucro').innerText = `R$ ${lucro.toFixed(2)}`;
+    document.getElementById('resLucro').style.color = lucro >= 0 ? '#00a884' : '#dc3545';
+    document.getElementById('resMargem').innerText = `${margem.toFixed(1)}%`;
+
+    return { custo, venda, embalagem, impostoPct, frete, comissaoPct, ehIndividual, lucro, margem };
+  }
+
+  function salvarItem() {
+    const nome = document.getElementById('nome').value.trim();
+    if (!nome) {
+      alert('Por favor, digite o Nome do Produto/Referência.');
+      return;
+    }
+
+    const res = calcular();
+    const novoItem = {
+      id: Date.now(),
+      nome,
+      custo: res.custo,
+      venda: res.venda,
+      embalagem: res.embalagem,
+      impostoPct: res.impostoPct,
+      frete: res.frete,
+      comissaoPct: res.comissaoPct,
+      ehIndividual: res.ehIndividual
+    };
+
+    // Atualizar se já existir ou adicionar
+    const index = itensSalvos.findIndex(i => i.nome.toLowerCase() === nome.toLowerCase());
+    if (index >= 0) {
+      itensSalvos[index] = novoItem;
+    } else {
+      itensSalvos.push(novoItem);
+    }
+
+    localStorage.setItem('amazon_pet_items', JSON.stringify(itensSalvos));
+    renderizarSalvos();
+  }
+
+  function abrirItem(id) {
+    const item = itensSalvos.find(i => i.id === id);
+    if (item) {
+      document.getElementById('nome').value = item.nome;
+      document.getElementById('custo').value = item.custo;
+      document.getElementById('venda').value = item.venda;
+      document.getElementById('embalagem').value = item.embalagem;
+      document.getElementById('imposto').value = item.impostoPct;
+      document.getElementById('frete').value = item.frete;
+      document.getElementById('comissao').value = item.comissaoPct;
+      document.getElementById('planoIndividual').checked = item.ehIndividual;
+      calcular();
+    }
+  }
+
+  function excluirItem(id) {
+    itensSalvos = itensSalvos.filter(i => i.id !== id);
+    localStorage.setItem('amazon_pet_items', JSON.stringify(itensSalvos));
+    renderizarSalvos();
+  }
+
+  function limparTudo() {
+    if (confirm('Tem certeza que deseja apagar todos os itens salvos?')) {
+      itensSalvos = [];
+      localStorage.removeItem('amazon_pet_items');
+      renderizarSalvos();
+    }
+  }
+
+  function renderizarSalvos() {
+    const lista = document.getElementById('listaSalvos');
+    lista.innerHTML = '';
+    itensSalvos.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'saved-item';
+      div.innerHTML = `
+        <div class="saved-info">
+          <div class="saved-title">${item.nome}</div>
+          <div>Custo: R$ ${item.custo.toFixed(2)} | Venda: R$ ${item.venda.toFixed(2)}</div>
+        </div>
+        <div class="item-btns">
+          <button class="btn-open" onclick="abrirItem(${item.id})">Abrir</button>
+          <button class="btn-delete" onclick="excluirItem(${item.id})">Excluir</button>
+        </div>
+      `;
+      lista.appendChild(div);
+    });
+  }
+
+  renderizarSalvos();
+</script>
+</body>
+</html>
